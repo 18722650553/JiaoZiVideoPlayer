@@ -925,18 +925,41 @@ public abstract class Jzvd extends FrameLayout implements View.OnClickListener, 
         }
     }
 
+    public Jzvd cloneMeWithoutCore() {
+        try {
+            Constructor<Jzvd> constructor = (Constructor<Jzvd>) Jzvd.this.getClass().getConstructor(Context.class);
+            Jzvd jzvd = constructor.newInstance(jzvdContext);
+            jzvd.setId(getId());
+            jzvd.setUp(jzDataSource.cloneMe(), SCREEN_NORMAL, mediaInterfaceClass);
+            ViewGroup tmpCore = jzvd.findViewById(R.id.jz_core);
+            ((ViewGroup) tmpCore.getParent()).removeView(tmpCore);
+            return jzvd;
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public void gotoScreenFullscreen() {
         gotoFullscreenTime = System.currentTimeMillis();
         jzvdContext = ((ViewGroup) getParent()).getContext();
-        ViewGroup vg = (ViewGroup) getParent();
-        vg.removeView(this);
-        cloneAJzvd(vg);
-        CONTAINER_LIST.add(vg);
-        vg = (ViewGroup) (JZUtils.scanForActivity(jzvdContext)).getWindow().getDecorView();
 
-        vg.addView(this, new FrameLayout.LayoutParams(
+        ViewGroup core = findViewById(R.id.jz_core);//移动的是这个core
+        ((ViewGroup) core.getParent()).removeView(core);
+        CONTAINER_LIST.add(this);
+
+        ViewGroup vg = (ViewGroup) (JZUtils.scanForActivity(jzvdContext)).getWindow().getDecorView();
+        Jzvd jzvd = cloneMeWithoutCore();
+        vg.addView(jzvd, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+        jzvd.addView(core);
         setScreenFullscreen();
         JZUtils.hideStatusBar(jzvdContext);
         JZUtils.setRequestedOrientation(jzvdContext, FULLSCREEN_ORIENTATION);
@@ -947,10 +970,18 @@ public abstract class Jzvd extends FrameLayout implements View.OnClickListener, 
     public void gotoScreenNormal() {//goback本质上是goto
         gobakFullscreenTime = System.currentTimeMillis();//退出全屏
         ViewGroup vg = (ViewGroup) (JZUtils.scanForActivity(jzvdContext)).getWindow().getDecorView();
-        vg.removeView(this);
-        CONTAINER_LIST.getLast().removeAllViews();
-        CONTAINER_LIST.getLast().addView(this, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        Jzvd jzvd = vg.findViewById(getId());
+        ViewGroup core = jzvd.findViewById(R.id.jz_core);
+        ((ViewGroup) core.getParent()).removeView(core);
+
+//        vg.removeView(this);
+
+        ViewGroup lastJzvd = CONTAINER_LIST.getLast();
+        ViewGroup tmpCore = lastJzvd.findViewById(R.id.jz_core);
+        ((ViewGroup) tmpCore.getParent()).removeView(tmpCore);
+
+
+        CONTAINER_LIST.getLast().addView(core);
         CONTAINER_LIST.pop();
 
         setScreenNormal();//这块可以放到jzvd中
